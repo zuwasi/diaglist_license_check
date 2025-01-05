@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ResultsSession>
+   <SessionData configName="Flow Analysis Aggressive" configPseudoUrl="c++test.builtin://Flow Analysis Aggressive" enabledAnalysis="Static" enabledHandlers="com.parasoft.xtest.checkers.api.scope.factory;com.parasoft.xtest.checkers.api.standards.factory" hasViols="true" header="??:diaglist_license_check:??true??false??" runId="" startTime="1736098202540" tool="c++test">
+      <Authors>
+         <Author id="dev1" name="danie"/>
+      </Authors>
+      <Selection>
+         <Res id="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c"/>
+      </Selection>
+      <XmlDataFiles file0="C:\Users\danie\source\repos\diaglist_license_check\.parasoft.dat\.solutions\diaglist_license_check\session_results_report_xml\cs_violations.xml"/>
+   </SessionData>
+   <Locations>
+      <Loc fsPath="C:\Users\danie\source\repos\diaglist_license_check\diaglist_license_check\diaglist_license_check.c" loc="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c" projPath="diaglist_license_check/diaglist_license_check" project="diaglist_license_check"/>
+   </Locations>
+   <CodingStandards>
+      <TestedFilesDetails>
+         <Total name="Suppressed / Total" supp="0" total="21">
+            <Project name="diaglist_license_check" supp="0" total="21">
+               <Res name="Source Files" supp="0" total="21">
+                  <Res loc="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c" locType="sr" name="diaglist_license_check.c" supp="0" total="21"/>
+               </Res>
+            </Project>
+         </Total>
+      </TestedFilesDetails>
+   </CodingStandards>
+</ResultsSession>

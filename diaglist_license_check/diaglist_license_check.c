@@ -13,6 +13,7 @@
 #define CONFIG_FILE "stored_path.txt"
 
 // Map month abbreviation to numerical value
+#if 0 // testing gsoultion for solving Do not subtract two pointers that do not address elements of the same array [BD-PB-PTRSUB] messege 
 int monthToNumber(const char* month) {
     static const char* months = "janfebmaraprmayjunjulaugsepoctnovdec";
     char monthLower[4];
@@ -31,6 +32,30 @@ int monthToNumber(const char* month) {
 
     return (monthPos - months) / 3;
 }
+#endif 
+
+int monthToNumber(const char* month) {
+    static const char* months[] = {
+        "jan", "feb", "mar", "apr", "may", "jun",
+        "jul", "aug", "sep", "oct", "nov", "dec"
+    };
+
+    char monthLower[4];
+    for (int i = 0; i < 3; i++) {
+        monthLower[i] = tolower(month[i]);
+    }
+    monthLower[3] = '\0'; // Null-terminate the string
+
+    for (int i = 0; i < 12; i++) {
+        if (strcmp(monthLower, months[i]) == 0) {
+            return i; // Return the zero-based index for the month
+        }
+    }
+
+    return -1; // Invalid month
+}
+
+
 
 // Function to parse a date in "DD-MMM-YYYY" format
 bool parseDate(const char* dateStr, int* day, int* month, int* year) {
@@ -159,6 +184,7 @@ void deleteStoredFilePath() {
     }
 }
 
+#if 0//commented out to create a diffrent version to test fix  for parasoft rules Avoid overflow due to reading a not zero terminated string [BD-PB-OVERFNZT]
 int main() {
     char filePath[MAX_PATH_LEN];
 
@@ -178,6 +204,39 @@ int main() {
     else {
         printf("No stored file path found. Please enter the license file path: ");
         scanf(" %s", filePath);
+        storeFilePath(filePath);
+    }
+
+    checkDiaglistSection(filePath);
+
+    return 0;
+}
+#endif 
+int main() {
+    char filePath[MAX_PATH_LEN] = { 0 }; // Initialize with zeros
+
+    if (loadStoredPath(filePath)) {
+        printf("Stored file path found: %s\n", filePath);
+        printf("Do you want to delete the stored file path? (y/n): ");
+        char choice;
+        scanf(" %c", &choice);
+
+        if (choice == 'y' || choice == 'Y') {
+            deleteStoredFilePath();
+            printf("Enter the license file path: ");
+            if (scanf(" %259s", filePath) != 1) { // Limit input length to prevent overflow
+                fprintf(stderr, "Error: Invalid file path input.\n");
+                return 1;
+            }
+            storeFilePath(filePath);
+        }
+    }
+    else {
+        printf("No stored file path found. Please enter the license file path: ");
+        if (scanf(" %259s", filePath) != 1) { // Limit input length to prevent overflow
+            fprintf(stderr, "Error: Invalid file path input.\n");
+            return 1;
+        }
         storeFilePath(filePath);
     }
 
