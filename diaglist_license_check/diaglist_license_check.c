@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <ctype.h>
+#include <windows.h> //added to solve possible race conftion at FILE* config = fopen(CONFIG_FILE, "w");
 
 #define MAX_PATH_LEN 260
 #define LINE_LEN 512
@@ -162,6 +163,9 @@ bool loadStoredPath(char* filePath) {
 }
 
 // Function to store the file path
+//possible race condtion at FILE* config = fopen(CONFIG_FILE, "w"); if stored_path.txt is opened more than once 
+// windows soultion
+#if 0
 void storeFilePath(const char* filePath) {
     FILE* config = fopen(CONFIG_FILE, "w");
     if (config) {
@@ -173,6 +177,64 @@ void storeFilePath(const char* filePath) {
         fprintf(stderr, "Error: Unable to store file path.\n");
     }
 }
+#endif
+//for Linux use that code 
+#if 0
+#include <fcntl.h>
+#include <unistd.h>
+
+void storeFilePath(const char* filePath) {
+    int fd = open(CONFIG_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
+        fprintf(stderr, "Error: Unable to store file path.\n");
+        return;
+    }
+
+    // Lock the file for exclusive access
+    if (flock(fd, LOCK_EX) == -1) {
+        fprintf(stderr, "Error: Unable to lock the file for writing.\n");
+        close(fd);
+        return;
+    }
+
+    dprintf(fd, "%s\n", filePath);
+
+    // Unlock and close the file
+    flock(fd, LOCK_UN);
+    close(fd);
+
+    printf("Stored file path successfully.\n");
+}
+#endif
+
+
+void storeFilePath(const char* filePath) {
+    HANDLE hFile = CreateFile(
+        CONFIG_FILE,
+        GENERIC_WRITE,
+        0, // No sharing
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "Error: Unable to store file path.\n");
+        return;
+    }
+
+    DWORD bytesWritten;
+    if (!WriteFile(hFile, filePath, strlen(filePath), &bytesWritten, NULL)) {
+        fprintf(stderr, "Error: Failed to write to the file.\n");
+    }
+    else {
+        printf("Stored file path successfully.\n");
+    }
+
+    CloseHandle(hFile);
+}
+
 
 // Function to delete the stored file path
 void deleteStoredFilePath() {
