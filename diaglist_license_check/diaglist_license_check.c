@@ -14,26 +14,6 @@
 #define CONFIG_FILE "stored_path.txt"
 
 // Map month abbreviation to numerical value
-#if 0 // testing gsoultion for solving Do not subtract two pointers that do not address elements of the same array [BD-PB-PTRSUB] messege 
-int monthToNumber(const char* month) {
-    static const char* months = "janfebmaraprmayjunjulaugsepoctnovdec";
-    char monthLower[4];
-
-    // Convert the input month to lowercase
-    for (int i = 0; i < 3; i++) {
-        monthLower[i] = tolower(month[i]);
-    }
-    monthLower[3] = '\0'; // Null-terminate the string
-
-    const char* monthPos = strstr(months, monthLower);
-
-    if (!monthPos) {
-        return -1; // Invalid month
-    }
-
-    return (monthPos - months) / 3;
-}
-#endif 
 
 int monthToNumber(const char* month) {
     static const char* months[] = {
@@ -163,21 +143,7 @@ bool loadStoredPath(char* filePath) {
 }
 
 // Function to store the file path
-//possible race condtion at FILE* config = fopen(CONFIG_FILE, "w"); if stored_path.txt is opened more than once 
-// windows soultion
-#if 0
-void storeFilePath(const char* filePath) {
-    FILE* config = fopen(CONFIG_FILE, "w");
-    if (config) {
-        fprintf(config, "%s\n", filePath);
-        fclose(config);
-        printf("Stored file path successfully.\n");
-    }
-    else {
-        fprintf(stderr, "Error: Unable to store file path.\n");
-    }
-}
-#endif
+
 //for Linux use that code 
 #if 0
 #include <fcntl.h>
@@ -246,34 +212,7 @@ void deleteStoredFilePath() {
     }
 }
 
-#if 0//commented out to create a diffrent version to test fix  for parasoft rules Avoid overflow due to reading a not zero terminated string [BD-PB-OVERFNZT]
-int main() {
-    char filePath[MAX_PATH_LEN];
 
-    if (loadStoredPath(filePath)) {
-        printf("Stored file path found: %s\n", filePath);
-        printf("Do you want to delete the stored file path? (y/n): ");
-        char choice;
-        scanf(" %c", &choice);
-
-        if (choice == 'y' || choice == 'Y') {
-            deleteStoredFilePath();
-            printf("Enter the license file path: ");
-            scanf(" %s", filePath);
-            storeFilePath(filePath);
-        }
-    }
-    else {
-        printf("No stored file path found. Please enter the license file path: ");
-        scanf(" %s", filePath);
-        storeFilePath(filePath);
-    }
-
-    checkDiaglistSection(filePath);
-
-    return 0;
-}
-#endif 
 int main() {
     char filePath[MAX_PATH_LEN] = { 0 }; // Initialize with zeros
 
