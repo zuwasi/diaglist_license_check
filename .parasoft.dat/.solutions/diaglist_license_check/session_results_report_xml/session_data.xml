@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ResultsSession>
-   <SessionData configName="Flow Analysis Aggressive" configPseudoUrl="c++test.builtin://Flow Analysis Aggressive" enabledAnalysis="Static" enabledHandlers="com.parasoft.xtest.checkers.api.scope.factory;com.parasoft.xtest.checkers.api.standards.factory" hasViols="true" header="??:diaglist_license_check:??true??false??" runId="" startTime="1736104022925" tool="c++test">
+   <SessionData configName="Flow Analysis Aggressive" configPseudoUrl="c++test.builtin://Flow Analysis Aggressive" enabledAnalysis="Static" enabledHandlers="com.parasoft.xtest.checkers.api.scope.factory;com.parasoft.xtest.checkers.api.standards.factory" hasViols="true" header="??:diaglist_license_check:??true??false??" runId="" startTime="1736706298397" tool="c++test">
       <Authors>
          <Author id="dev1" name="danie"/>
       </Authors>
       <Selection>
          <Res id="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c"/>
       </Selection>
-      <XmlDataFiles file0="C:\Users\danie\source\repos\diaglist_license_check\.parasoft.dat\.solutions\diaglist_license_check\session_results_report_xml\cs_violations.xml"/>
+      <XmlDataFiles file0="C:\Users\danie\Source\Repos\diaglist_license_check_v2\.parasoft.dat\.solutions\diaglist_license_check\session_results_report_xml\cs_violations.xml"/>
    </SessionData>
    <Locations>
-      <Loc fsPath="C:\Users\danie\source\repos\diaglist_license_check\diaglist_license_check\diaglist_license_check.c" loc="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c" projPath="diaglist_license_check/diaglist_license_check" project="diaglist_license_check"/>
+      <Loc fsPath="C:\Users\danie\source\repos\diaglist_license_check_v2\diaglist_license_check\diaglist_license_check.c" loc="diaglist_license_check/diaglist_license_check/Source Files/diaglist_license_check.c" projPath="diaglist_license_check/diaglist_license_check" project="diaglist_license_check"/>
    </Locations>
    <CodingStandards>
       <TestedFilesDetails>

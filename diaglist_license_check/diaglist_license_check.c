@@ -1,20 +1,17 @@
-// version with file path logic
-
-#define _CRT_SECURE_NO_WARNINGS //added just for VS2022 build 
+#define _CRT_SECURE_NO_WARNINGS // Added just for VS2022 build
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
 #include <ctype.h>
-#include <windows.h> //added to solve possible race conftion at FILE* config = fopen(CONFIG_FILE, "w");
+#include <windows.h>
 
 #define MAX_PATH_LEN 260
 #define LINE_LEN 512
 #define CONFIG_FILE "stored_path.txt"
 
 // Map month abbreviation to numerical value
-
 int monthToNumber(const char* month) {
     static const char* months[] = {
         "jan", "feb", "mar", "apr", "may", "jun",
@@ -35,8 +32,6 @@ int monthToNumber(const char* month) {
 
     return -1; // Invalid month
 }
-
-
 
 // Function to parse a date in "DD-MMM-YYYY" format
 bool parseDate(const char* dateStr, int* day, int* month, int* year) {
@@ -134,7 +129,7 @@ bool loadStoredPath(char* filePath) {
     }
     if (fgets(filePath, MAX_PATH_LEN, config) != NULL) {
         // Remove newline character
-        filePath[strcspn(filePath, "\n")] = '\0';
+        filePath[strcspn(filePath, "\r\n")] = '\0';
         fclose(config);
         return true;
     }
@@ -143,37 +138,6 @@ bool loadStoredPath(char* filePath) {
 }
 
 // Function to store the file path
-
-//for Linux use that code 
-#if 0
-#include <fcntl.h>
-#include <unistd.h>
-
-void storeFilePath(const char* filePath) {
-    int fd = open(CONFIG_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (fd == -1) {
-        fprintf(stderr, "Error: Unable to store file path.\n");
-        return;
-    }
-
-    // Lock the file for exclusive access
-    if (flock(fd, LOCK_EX) == -1) {
-        fprintf(stderr, "Error: Unable to lock the file for writing.\n");
-        close(fd);
-        return;
-    }
-
-    dprintf(fd, "%s\n", filePath);
-
-    // Unlock and close the file
-    flock(fd, LOCK_UN);
-    close(fd);
-
-    printf("Stored file path successfully.\n");
-}
-#endif
-
-
 void storeFilePath(const char* filePath) {
     HANDLE hFile = CreateFile(
         CONFIG_FILE,
@@ -186,21 +150,23 @@ void storeFilePath(const char* filePath) {
     );
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        fprintf(stderr, "Error: Unable to store file path.\n");
+        fprintf(stderr, "Error: Unable to store file path. Error code: %lu\n", GetLastError());
         return;
     }
 
     DWORD bytesWritten;
     if (!WriteFile(hFile, filePath, strlen(filePath), &bytesWritten, NULL)) {
-        fprintf(stderr, "Error: Failed to write to the file.\n");
+        fprintf(stderr, "Error: Failed to write to the file. Error code: %lu\n", GetLastError());
+    }
+    else if (bytesWritten != strlen(filePath)) {
+        fprintf(stderr, "Error: Partial write. Bytes written: %lu\n", bytesWritten);
     }
     else {
-        printf("Stored file path successfully.\n");
+        printf("Stored file path successfully: %s\n", filePath);
     }
 
     CloseHandle(hFile);
 }
-
 
 // Function to delete the stored file path
 void deleteStoredFilePath() {
@@ -211,7 +177,6 @@ void deleteStoredFilePath() {
         fprintf(stderr, "Error: No stored file path to delete.\n");
     }
 }
-
 
 int main() {
     char filePath[MAX_PATH_LEN] = { 0 }; // Initialize with zeros
