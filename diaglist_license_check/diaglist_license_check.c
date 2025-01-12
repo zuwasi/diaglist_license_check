@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS // Added just for VS2022 build
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,13 +6,13 @@
 #include <time.h>
 #include <ctype.h>
 #include <windows.h>
-#include <locale.h>
 
 #define MAX_PATH_LEN 260
 #define LINE_LEN 512
 #define CONFIG_FILE "stored_path.txt"
+#define RESULTS_FILE "results.txt"
 
-// Map month abbreviation to numerical value
+// Function to map month abbreviation to numerical value
 int monthToNumber(const char* month) {
     static const char* months[] = {
         "jan", "feb", "mar", "apr", "may", "jun",
@@ -32,16 +32,6 @@ int monthToNumber(const char* month) {
     }
 
     return -1; // Invalid month
-}
-
-// Function to parse a date in "DD-MMM-YYYY" format
-bool parseDate(const char* dateStr, int* day, int* month, int* year) {
-    char monthStr[4];
-    if (sscanf(dateStr, "%2d-%3s-%4d", day, monthStr, year) == 3) {
-        *month = monthToNumber(monthStr);
-        return *month != -1;
-    }
-    return false;
 }
 
 // Function to calculate the number of days until a future date
@@ -64,6 +54,19 @@ int daysUntil(int day, int month, int year) {
     return (int)((futureTime - now) / (60 * 60 * 24));
 }
 
+// Function to write results to a file
+void writeResultsToFile(const char* results) {
+    FILE* resultsFile = fopen(RESULTS_FILE, "a"); // Append to results file
+    if (!resultsFile) {
+        fprintf(stderr, "Error: Unable to create results file.\n");
+        return;
+    }
+
+    fprintf(resultsFile, "%s", results);
+    fclose(resultsFile);
+    printf("Results saved to '%s'.\n", RESULTS_FILE);
+}
+
 // Function to check for "# Diaglist" section and process dates
 void checkDiaglistSection(const char* filePath) {
     FILE* file = fopen(filePath, "r");
@@ -74,8 +77,8 @@ void checkDiaglistSection(const char* filePath) {
 
     char line[LINE_LEN];
     bool diaglistFound = false;
+    char resultsBuffer[8192] = ""; // Buffer to store results for writing to file
 
-    // Search for "# Diaglist" section
     while (fgets(line, sizeof(line), file)) {
         if (strstr(line, "# Diaglist") != NULL) {
             diaglistFound = true;
@@ -84,19 +87,24 @@ void checkDiaglistSection(const char* filePath) {
     }
 
     if (!diaglistFound) {
-        printf("Diaglist feature doesn't exist.\n");
+        snprintf(resultsBuffer, sizeof(resultsBuffer), "Diaglist feature doesn't exist.\n");
+        printf("%s", resultsBuffer);
+        writeResultsToFile(resultsBuffer);
         fclose(file);
         return;
     }
 
-    printf("Diaglist section found. Checking for dates...\n");
+    snprintf(resultsBuffer, sizeof(resultsBuffer), "Diaglist section found. Checking for dates...\n");
+    printf("%s", resultsBuffer);
+    writeResultsToFile(resultsBuffer);
 
-    // Process lines for dates in the "# Diaglist" section
     while (fgets(line, sizeof(line), file)) {
         int day, month, year;
         char* datePos = strstr(line, " "); // Start looking for dates after spaces
 
         while (datePos) {
+            char resultsLine[1024] = "";
+
             if (sscanf(datePos, "%2d-%*3s-%4d", &day, &year) == 2) {
                 char monthStr[4];
                 sscanf(datePos, "%*2d-%3s-%*4d", monthStr);
@@ -104,16 +112,17 @@ void checkDiaglistSection(const char* filePath) {
 
                 if (month != -1) {
                     int daysLeft = daysUntil(day, month, year);
-                    if (daysLeft >= 0) {
-                        printf("Expiration date: %02d-%s-%04d, Days left: %d\n", day, monthStr, year, daysLeft);
-                    }
-                    else {
-                        printf("Expiration date: %02d-%s-%04d is in the past.\n", day, monthStr, year);
-                    }
+                    snprintf(resultsLine, sizeof(resultsLine),
+                        "Expiration date: %02d-%s-%04d, Days left: %d\n",
+                        day, monthStr, year, daysLeft);
                 }
                 else {
-                    printf("Invalid month in date: %s\n", datePos);
+                    snprintf(resultsLine, sizeof(resultsLine), "Invalid month in date: %s\n", datePos);
                 }
+
+                // Print and save results
+                printf("%s", resultsLine);
+                writeResultsToFile(resultsLine);
             }
             datePos = strstr(datePos + 1, " "); // Move to the next space
         }
@@ -122,97 +131,54 @@ void checkDiaglistSection(const char* filePath) {
     fclose(file);
 }
 
-// Function to load the stored file path
-bool loadStoredPath(char* filePath) {
+// Function to manage stored path logic
+void manageStoredPath(char* filePath) {
     FILE* config = fopen(CONFIG_FILE, "r");
-    if (!config) {
-        return false;
-    }
-    if (fgets(filePath, MAX_PATH_LEN, config) != NULL) {
-        // Remove newline character
-        filePath[strcspn(filePath, "\r\n")] = '\0';
+    if (config) {
+        fgets(filePath, MAX_PATH_LEN, config);
+        filePath[strcspn(filePath, "\r\n")] = '\0'; // Remove newline
         fclose(config);
-        return true;
-    }
-    fclose(config);
-    return false;
-}
 
-// Function to store the file path
-void storeFilePath(const char* filePath) {
-    printf("DEBUG: Attempting to create file with name: %s\n", CONFIG_FILE);
+        printf("Stored path found: %s\n", filePath);
+        printf("Do you want to use the stored path? (y/n): ");
+        char choice;
+        scanf(" %c", &choice);
 
-    HANDLE hFile = CreateFile(
-        CONFIG_FILE,
-        GENERIC_WRITE,
-        0, // No sharing
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
+        if (choice == 'n' || choice == 'N') {
+            remove(CONFIG_FILE);
+            printf("Enter the license file path: ");
+            scanf(" %259s", filePath);
 
-    if (hFile == INVALID_HANDLE_VALUE) {
-        fprintf(stderr, "Error: Unable to store file path. Error code: %lu\n", GetLastError());
-        return;
-    }
-
-    DWORD bytesWritten;
-    if (!WriteFile(hFile, filePath, strlen(filePath), &bytesWritten, NULL)) {
-        fprintf(stderr, "Error: Failed to write to the file. Error code: %lu\n", GetLastError());
-    }
-    else if (bytesWritten != strlen(filePath)) {
-        fprintf(stderr, "Error: Partial write. Bytes written: %lu\n", bytesWritten);
+            FILE* newConfig = fopen(CONFIG_FILE, "w");
+            if (!newConfig) {
+                fprintf(stderr, "Error: Unable to create configuration file.\n");
+                exit(1);
+            }
+            fprintf(newConfig, "%s\n", filePath);
+            fclose(newConfig);
+        }
     }
     else {
-        printf("Stored file path successfully: %s\n", filePath);
-    }
+        printf("Enter the license file path: ");
+        scanf(" %259s", filePath);
 
-    CloseHandle(hFile);
-}
-
-// Function to delete the stored file path
-void deleteStoredFilePath() {
-    if (remove(CONFIG_FILE) == 0) {
-        printf("Stored file path deleted successfully.\n");
-    }
-    else {
-        fprintf(stderr, "Error: No stored file path to delete.\n");
+        FILE* configNew = fopen(CONFIG_FILE, "w");
+        if (!configNew) {
+            fprintf(stderr, "Error: Unable to create configuration file.\n");
+            exit(1);
+        }
+        fprintf(configNew, "%s\n", filePath);
+        fclose(configNew);
     }
 }
 
 int main() {
-    // Set locale for consistent behavior
-    setlocale(LC_ALL, "C");
+    char filePath[MAX_PATH_LEN] = { 0 };
 
-    char filePath[MAX_PATH_LEN] = { 0 }; // Initialize with zeros
+    manageStoredPath(filePath);
+    printf("Checking license file: %s\n", filePath);
 
-    if (loadStoredPath(filePath)) {
-        printf("Stored file path found: %s\n", filePath);
-        printf("Do you want to delete the stored file path? (y/n): ");
-        char choice;
-        scanf(" %c", &choice);
-
-        if (choice == 'y' || choice == 'Y') {
-            deleteStoredFilePath();
-            printf("Enter the license file path: ");
-            if (scanf(" %259s", filePath) != 1) { // Limit input length to prevent overflow
-                fprintf(stderr, "Error: Invalid file path input.\n");
-                return 1;
-            }
-            storeFilePath(filePath);
-        }
-    }
-    else {
-        printf("No stored file path found. Please enter the license file path: ");
-        if (scanf(" %259s", filePath) != 1) { // Limit input length to prevent overflow
-            fprintf(stderr, "Error: Invalid file path input.\n");
-            return 1;
-        }
-        storeFilePath(filePath);
-    }
-
-    checkDiaglistSection(filePath);
+    checkDiaglistSection(filePath); // Ensure file is processed after managing path
 
     return 0;
 }
