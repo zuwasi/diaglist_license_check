@@ -6,6 +6,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <windows.h>
+#include <locale.h>
 
 #define MAX_PATH_LEN 260
 #define LINE_LEN 512
@@ -139,6 +140,8 @@ bool loadStoredPath(char* filePath) {
 
 // Function to store the file path
 void storeFilePath(const char* filePath) {
+    printf("DEBUG: Attempting to create file with name: %s\n", CONFIG_FILE);
+
     HANDLE hFile = CreateFile(
         CONFIG_FILE,
         GENERIC_WRITE,
@@ -179,6 +182,9 @@ void deleteStoredFilePath() {
 }
 
 int main() {
+    // Set locale for consistent behavior
+    setlocale(LC_ALL, "C");
+
     char filePath[MAX_PATH_LEN] = { 0 }; // Initialize with zeros
 
     if (loadStoredPath(filePath)) {
