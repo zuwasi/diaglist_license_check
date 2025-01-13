@@ -181,7 +181,7 @@ int listLicenseFiles(const char* directory, char files[][MAX_PATH_LEN], int maxF
     hFind = FindFirstFileA(searchPath, &findFileData);
 
     if (hFind == INVALID_HANDLE_VALUE) {
-        fprintf(stderr, "No .lic files found in directory: %s\n", directory);
+        fprintf(stderr, "No QAC .lic files found in directory: %s\n", directory);
         return 0;
     }
 
