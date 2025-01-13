@@ -12,6 +12,25 @@
 #define CONFIG_FILE "stored_path.txt"
 #define RESULTS_FILE "results.txt"
 
+// Function prototypes
+int listLicenseFiles(const char* directory, char files[][MAX_PATH_LEN], int maxFiles);
+void chooseLicenseFile(char* filePath, const char* directory);
+bool isDirectory(const char* path);
+void checkDiaglistSection(const char* filePath);
+int monthToNumber(const char* month);
+int daysUntil(int day, int month, int year);
+void writeResultsToFile(const char* results);
+void manageStoredPath(char* filePath);
+
+// Function to check if a path is a directory
+bool isDirectory(const char* path) {
+    DWORD attributes = GetFileAttributesA(path);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return false; // Path does not exist
+    }
+    return (attributes & FILE_ATTRIBUTE_DIRECTORY);
+}
+
 // Function to map month abbreviation to numerical value
 int monthToNumber(const char* month) {
     static const char* months[] = {
@@ -78,11 +97,26 @@ void checkDiaglistSection(const char* filePath) {
     char line[LINE_LEN];
     bool diaglistFound = false;
     char resultsBuffer[8192] = ""; // Buffer to store results for writing to file
+    char licenseType[LINE_LEN] = ""; // To store LICENSE information
+    char customerName[LINE_LEN] = ""; // To store customer name
 
     while (fgets(line, sizeof(line), file)) {
         if (strstr(line, "# Diaglist") != NULL) {
             diaglistFound = true;
             break;
+        }
+
+        // Extract LICENSE type
+        if (strstr(line, "LICENSE") != NULL) {
+            sscanf(line, "LICENSE %511[^\n]", licenseType);
+        }
+
+        // Extract customer name
+        if (strstr(line, "customer=") != NULL) {
+            char* start = strstr(line, "customer=\"");
+            if (start) {
+                sscanf(start, "customer=\"%511[^\"]\"", customerName);
+            }
         }
     }
 
@@ -98,6 +132,12 @@ void checkDiaglistSection(const char* filePath) {
     printf("%s", resultsBuffer);
     writeResultsToFile(resultsBuffer);
 
+    // Add LICENSE and customer information to results
+    snprintf(resultsBuffer, sizeof(resultsBuffer), "License Type: %s\nCustomer Name: %s\n", licenseType, customerName);
+    printf("%s", resultsBuffer);
+    writeResultsToFile(resultsBuffer);
+
+    // Process lines for dates in the "# Diaglist" section
     while (fgets(line, sizeof(line), file)) {
         int day, month, year;
         char* datePos = strstr(line, " "); // Start looking for dates after spaces
@@ -131,6 +171,66 @@ void checkDiaglistSection(const char* filePath) {
     fclose(file);
 }
 
+// Function to list all `.lic` files in a directory
+int listLicenseFiles(const char* directory, char files[][MAX_PATH_LEN], int maxFiles) {
+    WIN32_FIND_DATAA findFileData;
+    HANDLE hFind;
+    char searchPath[MAX_PATH_LEN];
+
+    snprintf(searchPath, MAX_PATH_LEN, "%s\\*.lic", directory);
+    hFind = FindFirstFileA(searchPath, &findFileData);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "No .lic files found in directory: %s\n", directory);
+        return 0;
+    }
+
+    int count = 0;
+    do {
+        if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            snprintf(files[count], MAX_PATH_LEN, "%s\\%s", directory, findFileData.cFileName);
+            count++;
+        }
+    } while (FindNextFileA(hFind, &findFileData) != 0 && count < maxFiles);
+
+    FindClose(hFind);
+    return count;
+}
+
+// Function to allow the user to choose a license file
+void chooseLicenseFile(char* filePath, const char* directory) {
+    char files[100][MAX_PATH_LEN];
+    int fileCount = listLicenseFiles(directory, files, 100);
+
+    if (fileCount == 0) {
+        fprintf(stderr, "No license files found in the specified directory.\n");
+        exit(1);
+    }
+
+    printf("Found %d license file(s):\n", fileCount);
+    for (int i = 0; i < fileCount; i++) {
+        printf("%d: %s\n", i + 1, files[i]);
+    }
+
+    printf("Select a file by number: ");
+    int choice;
+    if (scanf("%d", &choice) != 1 || choice < 1 || choice > fileCount) {
+        fprintf(stderr, "Error: Invalid selection.\n");
+        exit(1);
+    }
+
+    strncpy(filePath, files[choice - 1], MAX_PATH_LEN);
+    printf("You selected: %s\n", filePath);
+
+    FILE* config = fopen(CONFIG_FILE, "w");
+    if (!config) {
+        fprintf(stderr, "Error: Unable to create configuration file.\n");
+        exit(1);
+    }
+    fprintf(config, "%s\n", filePath);
+    fclose(config);
+}
+
 // Function to manage stored path logic
 void manageStoredPath(char* filePath) {
     FILE* config = fopen(CONFIG_FILE, "r");
@@ -146,29 +246,29 @@ void manageStoredPath(char* filePath) {
 
         if (choice == 'n' || choice == 'N') {
             remove(CONFIG_FILE);
-            printf("Enter the license file path: ");
-            scanf(" %259s", filePath);
+            printf("Enter the directory containing license files: ");
+            char directory[MAX_PATH_LEN];
+            scanf(" %259s", directory);
 
-            FILE* newConfig = fopen(CONFIG_FILE, "w");
-            if (!newConfig) {
-                fprintf(stderr, "Error: Unable to create configuration file.\n");
+            if (!isDirectory(directory)) {
+                fprintf(stderr, "Error: %s is not a valid directory.\n", directory);
                 exit(1);
             }
-            fprintf(newConfig, "%s\n", filePath);
-            fclose(newConfig);
+
+            chooseLicenseFile(filePath, directory);
         }
     }
     else {
-        printf("Enter the license file path: ");
-        scanf(" %259s", filePath);
+        printf("Enter the directory containing license files: ");
+        char directory[MAX_PATH_LEN];
+        scanf(" %259s", directory);
 
-        FILE* configNew = fopen(CONFIG_FILE, "w");
-        if (!configNew) {
-            fprintf(stderr, "Error: Unable to create configuration file.\n");
+        if (!isDirectory(directory)) {
+            fprintf(stderr, "Error: %s is not a valid directory.\n", directory);
             exit(1);
         }
-        fprintf(configNew, "%s\n", filePath);
-        fclose(configNew);
+
+        chooseLicenseFile(filePath, directory);
     }
 }
 
@@ -178,7 +278,7 @@ int main() {
     manageStoredPath(filePath);
     printf("Checking license file: %s\n", filePath);
 
-    checkDiaglistSection(filePath); // Ensure file is processed after managing path
+    checkDiaglistSection(filePath);
 
     return 0;
 }
